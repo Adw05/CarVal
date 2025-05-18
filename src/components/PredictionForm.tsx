@@ -1,0 +1,264 @@
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Calendar, PlusCircle, Gauge, Car as CarIcon, Upload } from 'lucide-react';
+import Dropzone from 'react-dropzone';
+import { CarDetails } from '../types';
+import { fetchCarModels } from '../services/carApi';
+
+interface PredictionFormProps {
+  onSubmit: (data: CarDetails) => void;
+  onImageUpload: (formData: FormData) => void;
+  loading: boolean;
+}
+
+const PredictionForm: React.FC<PredictionFormProps> = ({ onSubmit, onImageUpload, loading }) => {
+  const [models, setModels] = useState<string[]>([]);
+  const [formData, setFormData] = useState<CarDetails>({
+    model: '',
+    year: 2020,
+    mileage: 50000,
+    future_year: 2025,
+  });
+  const [loadingModels, setLoadingModels] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadModels = async () => {
+      try {
+        setLoadingModels(true);
+        const modelsList = await fetchCarModels();
+        setModels(modelsList || []);
+        setFormData(prev => ({ ...prev, model: modelsList[0] || '' }));
+        setError(null);
+      } catch (err) {
+        console.error('Failed to load models:', err);
+        setError('Failed to load Toyota models. Please try again later.');
+      } finally {
+        setLoadingModels(false);
+      }
+    };
+
+    loadModels();
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'model' ? value : Number(value),
+    }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  const handleImageDrop = (acceptedFiles: File[]) => {
+    if (acceptedFiles.length > 0) {
+      const file = acceptedFiles[0];
+      const reader = new FileReader();
+      
+      reader.onload = () => {
+        setUploadedImage(reader.result as string);
+      };
+      
+      reader.readAsDataURL(file);
+      
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('year', String(formData.year || 2020));
+      formData.append('mileage', String(formData.mileage || 50000));
+      formData.append('future_year', String(formData.future_year || 2025));
+      
+      onImageUpload(formData);
+    }
+  };
+
+  return (
+    <motion.div 
+      className="glass-card p-6 md:p-8 max-w-4xl mx-auto"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <h2 className="text-xl md:text-2xl font-racing mb-6 flex items-center">
+        <CarIcon className="mr-2 text-racing-red-500" />
+        <span>PREDICT <span className="text-racing-red-500">TOYOTA</span> VALUE</span>
+      </h2>
+
+      {error && (
+        <div className="bg-racing-red-900/50 border border-racing-red-700 text-white p-4 rounded-md mb-6">
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-dark-300 mb-2 text-sm">Manufacturer</label>
+              <div className="input-field opacity-75 cursor-not-allowed bg-dark-700/50">
+                Toyota (Only available option currently)
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="model" className="block text-dark-300 mb-2 text-sm">Model</label>
+              <select 
+                id="model"
+                name="model"
+                value={formData.model}
+                onChange={handleInputChange}
+                className="input-field"
+                disabled={loadingModels}
+              >
+                {loadingModels ? (
+                  <option>Loading models...</option>
+                ) : (
+                  models.map(model => (
+                    <option key={model} value={model}>{model}</option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="year" className="block text-dark-300 mb-2 text-sm flex items-center">
+                <Calendar className="w-4 h-4 mr-1" />
+                Manufacturing Year
+              </label>
+              <input 
+                type="range"
+                id="year"
+                name="year"
+                min="1990"
+                max="2025"
+                value={formData.year}
+                onChange={handleInputChange}
+                className="w-full"
+              />
+              <div className="flex justify-between text-sm text-dark-400 mt-1">
+                <span>1990</span>
+                <span className="text-white font-semibold">{formData.year}</span>
+                <span>2025</span>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="mileage" className="block text-dark-300 mb-2 text-sm flex items-center">
+                <Gauge className="w-4 h-4 mr-1" />
+                Mileage (km)
+              </label>
+              <input 
+                type="number"
+                id="mileage"
+                name="mileage"
+                value={formData.mileage}
+                onChange={handleInputChange}
+                className="input-field"
+                min="0"
+                step="1000"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="future_year" className="block text-dark-300 mb-2 text-sm flex items-center">
+                <PlusCircle className="w-4 h-4 mr-1" />
+                Prediction Year
+              </label>
+              <select
+                id="future_year"
+                name="future_year"
+                value={formData.future_year}
+                onChange={handleInputChange}
+                className="input-field"
+              >
+                {Array.from({ length: 6 }, (_, i) => 2025 + i).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+
+            <motion.button
+              type="submit"
+              className="btn-primary w-full flex justify-center items-center"
+              disabled={loading}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Processing...
+                </>
+              ) : (
+                'Calculate Price'
+              )}
+            </motion.button>
+          </form>
+        </div>
+
+        <div>
+          <div className="mb-4">
+            <h3 className="text-lg font-racing mb-2 flex items-center">
+              <Upload className="w-4 h-4 mr-1 text-racing-red-500" />
+              VEHICLE RECOGNITION
+            </h3>
+            <p className="text-sm text-dark-300 mb-4">
+              Upload an image of a Toyota vehicle to automatically identify the model
+            </p>
+          </div>
+
+          <Dropzone onDrop={handleImageDrop} accept={{ 'image/*': [] }} disabled={loading}>
+            {({ getRootProps, getInputProps, isDragActive }) => (
+              <div
+                {...getRootProps()}
+                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all duration-300 h-52 flex items-center justify-center ${
+                  isDragActive ? 'border-racing-red-500 bg-racing-red-900/20' : 'border-dark-700 hover:border-racing-red-600'
+                } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <input {...getInputProps()} disabled={loading} />
+                
+                {uploadedImage ? (
+                  <div className="relative w-full h-full">
+                    <img 
+                      src={uploadedImage} 
+                      alt="Uploaded vehicle" 
+                      className="w-full h-full object-contain"
+                    />
+                    {loading && (
+                      <div className="absolute inset-0 bg-dark-900/70 flex items-center justify-center">
+                        <div className="text-white text-sm">Analyzing image...</div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-dark-400">
+                    {isDragActive ? (
+                      <p>Drop the image here...</p>
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 mx-auto mb-2 text-racing-red-500" />
+                        <p>Drag & drop an image here, or click to select</p>
+                        <p className="text-xs mt-2 text-dark-500">
+                          JPG, PNG or GIF format
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </Dropzone>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+export default PredictionForm;

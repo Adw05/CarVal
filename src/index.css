@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-dark-900 text-white font-body;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  @apply font-racing font-semibold tracking-wider;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-dark-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-racing-red-700 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-racing-red-600;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  @apply bg-racing-red-500 appearance-none h-5 w-5 rounded-full;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  @apply bg-dark-700 h-2 rounded-full;
+}
+
+.racing-border {
+  @apply border-racing-red-600 border-2;
+  box-shadow: 0 0 15px rgba(230, 0, 0, 0.5);
+}
+
+.card-glow {
+  box-shadow: 0 0 25px rgba(230, 0, 0, 0.15);
+}
+
+/* Background options */
+.car-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: -1;
+  filter: brightness(0.4) saturate(1.2);
+}
+
+/* Static image background */
+.car-background.static-bg {
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%), 
+              url('https://images.pexels.com/photos/3422964/pexels-photo-3422964.jpeg?auto=compress&cs=tinysrgb&w=1600') center/cover no-repeat;
+}
+
+/* GIF background */
+.car-background.gif-bg {
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%);
+}
+
+.car-background.gif-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('YOUR_GIF_URL_HERE') center/cover no-repeat;
+  z-index: -1;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-racing-red-600 hover:bg-racing-red-500 text-white font-semibold py-2 px-4 rounded-md transition-all duration-300;
+  }
+  
+  .input-field {
+    @apply bg-dark-800 border border-dark-700 focus:border-racing-red-500 text-white rounded-md px-4 py-2 w-full transition-all duration-300;
+  }
+  
+  .glass-card {
+    @apply bg-dark-800/70 backdrop-blur-md rounded-lg shadow-lg border border-dark-700;
+  }
+}
