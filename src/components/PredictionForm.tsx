@@ -39,7 +39,7 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
         setError(null);
       } catch (err) {
         console.error('Failed to load models:', err);
-        setError('Failed to load Toyota models. Please try again later.');
+        setError('Failed to load models. Please try again later.');
       } finally {
         setLoadingModels(false);
       }
@@ -217,7 +217,7 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
               VEHICLE RECOGNITION
             </h3>
             <p className="text-sm text-dark-300 mb-4">
-              Upload an image of a Toyota vehicle to automatically identify the model
+              Upload an image of a vehicle to automatically identify the model
             </p>
           </div>
 
