@@ -9,19 +9,26 @@ interface PredictionFormProps {
   onSubmit: (data: CarDetails) => void;
   onImageUpload: (formData: FormData) => void;
   loading: boolean;
+  formData: CarDetails;
+  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  isImageMode: boolean;
+  uploadedImage: string | null;
+  setUploadedImage: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
-const PredictionForm: React.FC<PredictionFormProps> = ({ onSubmit, onImageUpload, loading }) => {
+const PredictionForm: React.FC<PredictionFormProps> = ({
+  onSubmit,
+  onImageUpload,
+  loading,
+  formData,
+  onInputChange,
+  isImageMode,
+  uploadedImage,
+  setUploadedImage,
+}) => {
   const [models, setModels] = useState<string[]>([]);
-  const [formData, setFormData] = useState<CarDetails>({
-    model: '',
-    year: 2020,
-    mileage: 50000,
-    future_year: 2025,
-  });
   const [loadingModels, setLoadingModels] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
 
   useEffect(() => {
     const loadModels = async () => {
@@ -29,7 +36,6 @@ const PredictionForm: React.FC<PredictionFormProps> = ({ onSubmit, onImageUpload
         setLoadingModels(true);
         const modelsList = await fetchCarModels();
         setModels(modelsList || []);
-        setFormData(prev => ({ ...prev, model: modelsList[0] || '' }));
         setError(null);
       } catch (err) {
         console.error('Failed to load models:', err);
@@ -42,17 +48,13 @@ const PredictionForm: React.FC<PredictionFormProps> = ({ onSubmit, onImageUpload
     loadModels();
   }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'model' ? value : Number(value),
-    }));
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    const dataToSubmit: CarDetails = {
+      ...formData,
+      mileage: Number(formData.mileage) || 0,
+    };
+    onSubmit(dataToSubmit);
   };
 
   const handleImageDrop = (acceptedFiles: File[]) => {
@@ -66,13 +68,10 @@ const PredictionForm: React.FC<PredictionFormProps> = ({ onSubmit, onImageUpload
       
       reader.readAsDataURL(file);
       
-      const formData = new FormData();
-      formData.append('image', file);
-      formData.append('year', String(formData.year || 2020));
-      formData.append('mileage', String(formData.mileage || 50000));
-      formData.append('future_year', String(formData.future_year || 2025));
+      const imageFormData = new FormData();
+      imageFormData.append('image', file);
       
-      onImageUpload(formData);
+      onImageUpload(imageFormData);
     }
   };
 
@@ -110,12 +109,16 @@ const PredictionForm: React.FC<PredictionFormProps> = ({ onSubmit, onImageUpload
                 id="model"
                 name="model"
                 value={formData.model}
-                onChange={handleInputChange}
+                onChange={onInputChange}
                 className="input-field"
-                disabled={loadingModels}
+                disabled={loadingModels || isImageMode}
               >
                 {loadingModels ? (
                   <option>Loading models...</option>
+                ) : isImageMode && !formData.model ? (
+                  <option>Detecting model from image...</option>
+                ) : isImageMode && formData.model ? (
+                   <option key={formData.model} value={formData.model}>{formData.model}</option>
                 ) : (
                   models.map(model => (
                     <option key={model} value={model}>{model}</option>
@@ -136,8 +139,9 @@ const PredictionForm: React.FC<PredictionFormProps> = ({ onSubmit, onImageUpload
                 min="1990"
                 max="2025"
                 value={formData.year}
-                onChange={handleInputChange}
+                onChange={onInputChange}
                 className="w-full"
+                disabled={loading}
               />
               <div className="flex justify-between text-sm text-dark-400 mt-1">
                 <span>1990</span>
@@ -156,10 +160,12 @@ const PredictionForm: React.FC<PredictionFormProps> = ({ onSubmit, onImageUpload
                 id="mileage"
                 name="mileage"
                 value={formData.mileage}
-                onChange={handleInputChange}
+                onChange={onInputChange}
                 className="input-field"
                 min="0"
                 step="1000"
+                disabled={loading}
+                placeholder="Enter mileage"
               />
             </div>
 
@@ -172,8 +178,9 @@ const PredictionForm: React.FC<PredictionFormProps> = ({ onSubmit, onImageUpload
                 id="future_year"
                 name="future_year"
                 value={formData.future_year}
-                onChange={handleInputChange}
+                onChange={onInputChange}
                 className="input-field"
+                disabled={loading}
               >
                 {Array.from({ length: 6 }, (_, i) => 2025 + i).map(year => (
                   <option key={year} value={year}>{year}</option>
@@ -184,7 +191,7 @@ const PredictionForm: React.FC<PredictionFormProps> = ({ onSubmit, onImageUpload
             <motion.button
               type="submit"
               className="btn-primary w-full flex justify-center items-center"
-              disabled={loading}
+              disabled={loading || (isImageMode && !formData.model)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >

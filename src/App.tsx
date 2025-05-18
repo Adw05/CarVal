@@ -11,6 +11,21 @@ function App() {
   const [predictionResult, setPredictionResult] = useState<PredictionResultType | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState<CarDetails>({
+    model: '',
+    year: 2020,
+    mileage: 50000,
+    future_year: 2025,
+  });
+  const [isImageMode, setIsImageMode] = useState(false);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'model' ? value : Number(value),
+    }));
+  };
 
   const handleFormSubmit = async (data: CarDetails) => {
     try {
@@ -19,6 +34,8 @@ function App() {
       const result = await predictCarPrice(data);
       setPredictionResult(result);
       scrollToResults();
+      setIsImageMode(false); // Reset image mode after manual submission
+      setUploadedImage(null); // Clear uploaded image display
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred while predicting price');
       console.error('Prediction error:', err);
@@ -27,16 +44,28 @@ function App() {
     }
   };
 
-  const handleImageUpload = async (formData: FormData) => {
+  const handleImageUpload = async (imageFormData: FormData) => {
     try {
       setLoading(true);
       setError(null);
-      const result = await predictFromImage(formData);
+      setIsImageMode(true);
+      // Keep current form data for year, mileage, future_year
+      const currentFormData = { ...formData };
+      // Append current form data to imageFormData
+      imageFormData.set('year', String(currentFormData.year));
+      imageFormData.set('mileage', String(currentFormData.mileage));
+      imageFormData.set('future_year', String(currentFormData.future_year));
+
+      const result = await predictFromImage(imageFormData);
+      // Update form data with the predicted model
+      setFormData(prev => ({ ...prev, model: result.model }));
       setPredictionResult(result);
       scrollToResults();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred while processing the image');
       console.error('Image processing error:', err);
+      setIsImageMode(false); // Exit image mode on error
+      setUploadedImage(null); // Clear uploaded image display on error
     } finally {
       setLoading(false);
     }
@@ -47,6 +76,8 @@ function App() {
       document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' });
     }, 500);
   };
+
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -88,9 +119,14 @@ function App() {
           )}
           
           <PredictionForm 
+            formData={formData}
+            onInputChange={handleInputChange}
             onSubmit={handleFormSubmit} 
             onImageUpload={handleImageUpload}
             loading={loading}
+            isImageMode={isImageMode}
+            uploadedImage={uploadedImage}
+            setUploadedImage={setUploadedImage}
           />
           
           <div id="results">
