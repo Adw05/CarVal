@@ -53,7 +53,7 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
     e.preventDefault();
     const dataToSubmit: CarDetails = {
       ...formData,
-      mileage: Number(formData.mileage) || 0,
+      mileage: Number(formData.mileage) || 50000, // Default to 50000 if not set
     };
     onSubmit(dataToSubmit);
   };
@@ -71,6 +71,11 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
       
       const imageFormData = new FormData();
       imageFormData.append('image', file);
+      
+      // Set default mileage when image is uploaded
+      onInputChange({
+        target: { name: 'mileage', value: '50000' }
+      } as React.ChangeEvent<HTMLInputElement>);
       
       onImageUpload(imageFormData);
     }
@@ -126,6 +131,8 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
     );
   }
 
+  const isImageModeWithModel = inputMode === 'image' && formData.model;
+
   return (
     <motion.div 
       className="glass-card p-6 md:p-8 max-w-4xl mx-auto"
@@ -170,7 +177,7 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
                 value={formData.model}
                 onChange={onInputChange}
                 className="input-field"
-                disabled={loadingModels || (inputMode === 'image' && !formData.model)}
+                disabled={loadingModels || inputMode === 'image'}
               >
                 <option value="">Select a model</option>
                 {loadingModels ? (
@@ -185,86 +192,90 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
               </select>
             </div>
 
-            <div>
-              <label htmlFor="year" className="block text-dark-300 mb-2 text-sm flex items-center">
-                <Calendar className="w-4 h-4 mr-1" />
-                Manufacturing Year
-              </label>
-              <input 
-                type="range"
-                id="year"
-                name="year"
-                min="1990"
-                max="2025"
-                value={formData.year}
-                onChange={onInputChange}
-                className="w-full"
-                disabled={loading}
-              />
-              <div className="flex justify-between text-sm text-dark-400 mt-1">
-                <span>1990</span>
-                <span className="text-white font-semibold">{formData.year}</span>
-                <span>2025</span>
-              </div>
-            </div>
+            {(inputMode === 'manual' || isImageModeWithModel) && (
+              <>
+                <div>
+                  <label htmlFor="year" className="block text-dark-300 mb-2 text-sm flex items-center">
+                    <Calendar className="w-4 h-4 mr-1" />
+                    Manufacturing Year
+                  </label>
+                  <input 
+                    type="range"
+                    id="year"
+                    name="year"
+                    min="1990"
+                    max="2025"
+                    value={formData.year}
+                    onChange={onInputChange}
+                    className="w-full"
+                    disabled={loading}
+                  />
+                  <div className="flex justify-between text-sm text-dark-400 mt-1">
+                    <span>1990</span>
+                    <span className="text-white font-semibold">{formData.year}</span>
+                    <span>2025</span>
+                  </div>
+                </div>
 
-            <div>
-              <label htmlFor="mileage" className="block text-dark-300 mb-2 text-sm flex items-center">
-                <Gauge className="w-4 h-4 mr-1" />
-                Mileage (km)
-              </label>
-              <input 
-                type="number"
-                id="mileage"
-                name="mileage"
-                value={formData.mileage}
-                onChange={onInputChange}
-                className="input-field"
-                min="0"
-                step="1000"
-                disabled={loading}
-                placeholder="Enter value"
-              />
-            </div>
+                <div>
+                  <label htmlFor="mileage" className="block text-dark-300 mb-2 text-sm flex items-center">
+                    <Gauge className="w-4 h-4 mr-1" />
+                    Mileage (km)
+                  </label>
+                  <input 
+                    type="number"
+                    id="mileage"
+                    name="mileage"
+                    value={formData.mileage}
+                    onChange={onInputChange}
+                    className="input-field"
+                    min="0"
+                    step="1000"
+                    disabled={loading}
+                    placeholder="Enter value"
+                  />
+                </div>
 
-            <div>
-              <label htmlFor="future_year" className="block text-dark-300 mb-2 text-sm flex items-center">
-                <PlusCircle className="w-4 h-4 mr-1" />
-                Prediction Year
-              </label>
-              <select
-                id="future_year"
-                name="future_year"
-                value={formData.future_year}
-                onChange={onInputChange}
-                className="input-field"
-                disabled={loading}
-              >
-                {Array.from({ length: 6 }, (_, i) => 2025 + i).map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
-            </div>
+                <div>
+                  <label htmlFor="future_year" className="block text-dark-300 mb-2 text-sm flex items-center">
+                    <PlusCircle className="w-4 h-4 mr-1" />
+                    Prediction Year
+                  </label>
+                  <select
+                    id="future_year"
+                    name="future_year"
+                    value={formData.future_year}
+                    onChange={onInputChange}
+                    className="input-field"
+                    disabled={loading}
+                  >
+                    {Array.from({ length: 6 }, (_, i) => 2025 + i).map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </div>
 
-            <motion.button
-              type="submit"
-              className="btn-primary w-full flex justify-center items-center"
-              disabled={loading || !formData.model || (inputMode === 'image' && !uploadedImage)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              {loading ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Processing...
-                </>
-              ) : (
-                'Calculate Price'
-              )}
-            </motion.button>
+                <motion.button
+                  type="submit"
+                  className="btn-primary w-full flex justify-center items-center"
+                  disabled={loading || !formData.model}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing...
+                    </>
+                  ) : (
+                    'Calculate Price'
+                  )}
+                </motion.button>
+              </>
+            )}
           </form>
         </div>
 
