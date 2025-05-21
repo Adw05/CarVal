@@ -14,7 +14,7 @@ const Header: React.FC = () => {
         <Car className="h-8 w-8 text-racing-red-500" strokeWidth={2} />
         <div>
           <h1 className="text-xl md:text-2xl font-racing text-white">
-            CAR<span className="text-racing-red-500">VALUE</span>PRO
+            Car<span className="text-racing-red-500">Val</span>
           </h1>
           <p className="text-xs text-dark-400">Price Prediction</p>
         </div>
