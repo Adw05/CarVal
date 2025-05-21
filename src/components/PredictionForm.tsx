@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, PlusCircle, Gauge, Car as CarIcon, Upload } from 'lucide-react';
+import { Calendar, PlusCircle, Gauge, Car as CarIcon, Upload, Image, PenSquare } from 'lucide-react';
 import Dropzone from 'react-dropzone';
 import { CarDetails } from '../types';
 import { fetchCarModels } from '../services/carApi';
@@ -29,6 +29,7 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
   const [models, setModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [inputMode, setInputMode] = useState<'manual' | 'image'>('manual');
 
   useEffect(() => {
     const loadModels = async () => {
@@ -75,6 +76,13 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
     }
   };
 
+  const handleModeChange = (mode: 'manual' | 'image') => {
+    setInputMode(mode);
+    if (mode === 'manual') {
+      setUploadedImage(null);
+    }
+  };
+
   return (
     <motion.div 
       className="glass-card p-6 md:p-8 max-w-4xl mx-auto"
@@ -92,6 +100,33 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
           {error}
         </div>
       )}
+
+      <div className="mb-8">
+        <div className="flex space-x-4">
+          <button
+            onClick={() => handleModeChange('manual')}
+            className={`flex-1 p-4 rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 ${
+              inputMode === 'manual' 
+                ? 'bg-racing-red-600 text-white' 
+                : 'bg-dark-800 text-dark-300 hover:bg-dark-700'
+            }`}
+          >
+            <PenSquare className="w-5 h-5" />
+            <span>Manual Entry</span>
+          </button>
+          <button
+            onClick={() => handleModeChange('image')}
+            className={`flex-1 p-4 rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 ${
+              inputMode === 'image' 
+                ? 'bg-racing-red-600 text-white' 
+                : 'bg-dark-800 text-dark-300 hover:bg-dark-700'
+            }`}
+          >
+            <Image className="w-5 h-5" />
+            <span>Image Recognition</span>
+          </button>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
@@ -111,14 +146,13 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
                 value={formData.model}
                 onChange={onInputChange}
                 className="input-field"
-                disabled={loadingModels || isImageMode}
+                disabled={loadingModels || (inputMode === 'image' && !formData.model)}
               >
+                <option value="">Select a model</option>
                 {loadingModels ? (
-                  <option>Loading models...</option>
-                ) : isImageMode && !formData.model ? (
-                  <option>Detecting model from image...</option>
-                ) : isImageMode && formData.model ? (
-                   <option key={formData.model} value={formData.model}>{formData.model}</option>
+                  <option disabled>Loading models...</option>
+                ) : inputMode === 'image' && !formData.model ? (
+                  <option disabled>Detecting model from image...</option>
                 ) : (
                   models.map(model => (
                     <option key={model} value={model}>{model}</option>
@@ -191,7 +225,7 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
             <motion.button
               type="submit"
               className="btn-primary w-full flex justify-center items-center"
-              disabled={loading || (isImageMode && !formData.model)}
+              disabled={loading || (inputMode === 'image' && !formData.model)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -210,59 +244,61 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
           </form>
         </div>
 
-        <div>
-          <div className="mb-4">
-            <h3 className="text-lg font-racing mb-2 flex items-center">
-              <Upload className="w-4 h-4 mr-1 text-racing-red-500" />
-              VEHICLE RECOGNITION
-            </h3>
-            <p className="text-sm text-dark-300 mb-4">
-              Upload an image of a vehicle to automatically identify the model
-            </p>
-          </div>
+        {inputMode === 'image' && (
+          <div>
+            <div className="mb-4">
+              <h3 className="text-lg font-racing mb-2 flex items-center">
+                <Upload className="w-4 h-4 mr-1 text-racing-red-500" />
+                VEHICLE RECOGNITION
+              </h3>
+              <p className="text-sm text-dark-300 mb-4">
+                Upload an image of a vehicle to automatically identify the model
+              </p>
+            </div>
 
-          <Dropzone onDrop={handleImageDrop} accept={{ 'image/*': [] }} disabled={loading}>
-            {({ getRootProps, getInputProps, isDragActive }) => (
-              <div
-                {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all duration-300 h-52 flex items-center justify-center ${
-                  isDragActive ? 'border-racing-red-500 bg-racing-red-900/20' : 'border-dark-700 hover:border-racing-red-600'
-                } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <input {...getInputProps()} disabled={loading} />
-                
-                {uploadedImage ? (
-                  <div className="relative w-full h-full">
-                    <img 
-                      src={uploadedImage} 
-                      alt="Uploaded vehicle" 
-                      className="w-full h-full object-contain"
-                    />
-                    {loading && (
-                      <div className="absolute inset-0 bg-dark-900/70 flex items-center justify-center">
-                        <div className="text-white text-sm">Analyzing image...</div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-dark-400">
-                    {isDragActive ? (
-                      <p>Drop the image here...</p>
-                    ) : (
-                      <>
-                        <Upload className="w-8 h-8 mx-auto mb-2 text-racing-red-500" />
-                        <p>Drag & drop an image here, or click to select</p>
-                        <p className="text-xs mt-2 text-dark-500">
-                          JPG, PNG or GIF format
-                        </p>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </Dropzone>
-        </div>
+            <Dropzone onDrop={handleImageDrop} accept={{ 'image/*': [] }} disabled={loading}>
+              {({ getRootProps, getInputProps, isDragActive }) => (
+                <div
+                  {...getRootProps()}
+                  className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all duration-300 h-52 flex items-center justify-center ${
+                    isDragActive ? 'border-racing-red-500 bg-racing-red-900/20' : 'border-dark-700 hover:border-racing-red-600'
+                  } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <input {...getInputProps()} disabled={loading} />
+                  
+                  {uploadedImage ? (
+                    <div className="relative w-full h-full">
+                      <img 
+                        src={uploadedImage} 
+                        alt="Uploaded vehicle" 
+                        className="w-full h-full object-contain"
+                      />
+                      {loading && (
+                        <div className="absolute inset-0 bg-dark-900/70 flex items-center justify-center">
+                          <div className="text-white text-sm">Analyzing image...</div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-dark-400">
+                      {isDragActive ? (
+                        <p>Drop the image here...</p>
+                      ) : (
+                        <>
+                          <Upload className="w-8 h-8 mx-auto mb-2 text-racing-red-500" />
+                          <p>Drag & drop an image here, or click to select</p>
+                          <p className="text-xs mt-2 text-dark-500">
+                            JPG, PNG or GIF format
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </Dropzone>
+          </div>
+        )}
       </div>
     </motion.div>
   );
