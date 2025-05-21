@@ -14,10 +14,9 @@ function App() {
   const [formData, setFormData] = useState<CarDetails>({
     model: '',
     year: 2020,
-    mileage: 50000,
+    mileage: 0,
     future_year: 2025,
   });
-  const [isImageMode, setIsImageMode] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -34,7 +33,6 @@ function App() {
       const result = await predictCarPrice(data);
       setPredictionResult(result);
       scrollToResults();
-      setIsImageMode(false); // Reset image mode after manual submission
       setUploadedImage(null); // Clear uploaded image display
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred while predicting price');
@@ -48,23 +46,26 @@ function App() {
     try {
       setLoading(true);
       setError(null);
-      setIsImageMode(true);
-      // Keep current form data for year, mileage, future_year
+      // Keep current form data for year and future_year, but reset mileage
       const currentFormData = { ...formData };
       // Append current form data to imageFormData
       imageFormData.set('year', String(currentFormData.year));
-      imageFormData.set('mileage', String(currentFormData.mileage));
       imageFormData.set('future_year', String(currentFormData.future_year));
 
       const result = await predictFromImage(imageFormData);
-      // Update form data with the predicted model
-      setFormData(prev => ({ ...prev, model: result.model }));
-      setPredictionResult(result);
-      scrollToResults();
+      // Update form data with the predicted model and reset mileage to empty
+      setFormData(prev => ({ 
+        ...prev, 
+        model: result.model,
+        mileage: 0 // Reset mileage to empty
+      }));
+      
+      // Don't show prediction result until user completes the form and clicks Calculate
+      // setPredictionResult(result);
+      // scrollToResults();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred while processing the image');
       console.error('Image processing error:', err);
-      setIsImageMode(false); // Exit image mode on error
       setUploadedImage(null); // Clear uploaded image display on error
     } finally {
       setLoading(false);
@@ -124,7 +125,6 @@ function App() {
             onSubmit={handleFormSubmit} 
             onImageUpload={handleImageUpload}
             loading={loading}
-            isImageMode={isImageMode}
             uploadedImage={uploadedImage}
             setUploadedImage={setUploadedImage}
           />

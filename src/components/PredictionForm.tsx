@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, PlusCircle, Gauge, Car as CarIcon, Upload, Image, PenSquare } from 'lucide-react';
+import { Calendar, PlusCircle, Gauge, Car as CarIcon, Upload, Image, PenSquare, AlertCircle } from 'lucide-react';
 import Dropzone from 'react-dropzone';
 import { CarDetails } from '../types';
 import { fetchCarModels } from '../services/carApi';
@@ -11,7 +11,6 @@ interface PredictionFormProps {
   loading: boolean;
   formData: CarDetails;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
-  isImageMode: boolean;
   uploadedImage: string | null;
   setUploadedImage: React.Dispatch<React.SetStateAction<string | null>>;
 }
@@ -22,7 +21,6 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
   loading,
   formData,
   onInputChange,
-  isImageMode,
   uploadedImage,
   setUploadedImage,
 }) => {
@@ -30,6 +28,7 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
   const [loadingModels, setLoadingModels] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [inputMode, setInputMode] = useState<'manual' | 'image' | null>(null);
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
 
   useEffect(() => {
     const loadModels = async () => {
@@ -51,11 +50,23 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const dataToSubmit: CarDetails = {
-      ...formData,
-      mileage: Number(formData.mileage) || 50000, // Default to 50000 if not set
-    };
-    onSubmit(dataToSubmit);
+    
+    // Validate required fields
+    const newErrors: {[key: string]: string} = {};
+    
+    if (!formData.mileage) {
+      newErrors.mileage = 'Please enter the mileage to proceed with prediction.';
+    }
+    
+    setValidationErrors(newErrors);
+    
+    // Only submit if there are no validation errors
+    if (Object.keys(newErrors).length === 0) {
+      const dataToSubmit: CarDetails = {
+        ...formData
+      };
+      onSubmit(dataToSubmit);
+    }
   };
 
   const handleImageDrop = (acceptedFiles: File[]) => {
@@ -72,10 +83,13 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
       const imageFormData = new FormData();
       imageFormData.append('image', file);
       
-      // Set default mileage when image is uploaded
+      // Reset mileage field to empty when image is uploaded
       onInputChange({
-        target: { name: 'mileage', value: '50000' }
+        target: { name: 'mileage', value: '' }
       } as React.ChangeEvent<HTMLInputElement>);
+      
+      // Clear any previous validation errors
+      setValidationErrors({});
       
       onImageUpload(imageFormData);
     }
@@ -164,32 +178,38 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-dark-300 mb-2 text-sm">Manufacturer</label>
-              <div className="input-field opacity-75 cursor-not-allowed bg-dark-700/50">
+              <div className={`input-field opacity-75 cursor-not-allowed bg-dark-700/50 ${inputMode === 'image' && formData.model ? 'bg-dark-700/30 text-white' : ''}`}>
                 Toyota (Only available option currently)
               </div>
             </div>
 
             <div>
               <label htmlFor="model" className="block text-dark-300 mb-2 text-sm">Model</label>
-              <select 
-                id="model"
-                name="model"
-                value={formData.model}
-                onChange={onInputChange}
-                className="input-field"
-                disabled={loadingModels || inputMode === 'image'}
-              >
-                <option value="">Select a model</option>
-                {loadingModels ? (
-                  <option disabled>Loading models...</option>
-                ) : inputMode === 'image' && !formData.model ? (
-                  <option disabled>Detecting model from image...</option>
-                ) : (
-                  models.map(model => (
-                    <option key={model} value={model}>{model}</option>
-                  ))
-                )}
-              </select>
+              {inputMode === 'image' && formData.model ? (
+                <div className="input-field bg-dark-700/30 text-white cursor-not-allowed">
+                  {formData.model}
+                </div>
+              ) : (
+                <select 
+                  id="model"
+                  name="model"
+                  value={formData.model}
+                  onChange={onInputChange}
+                  className="input-field"
+                  disabled={loadingModels || inputMode === 'image'}
+                >
+                  <option value="">Select a model</option>
+                  {loadingModels ? (
+                    <option disabled>Loading models...</option>
+                  ) : inputMode === 'image' && !formData.model ? (
+                    <option disabled>Detecting model from image...</option>
+                  ) : (
+                    models.map(model => (
+                      <option key={model} value={model}>{model}</option>
+                    ))
+                  )}
+                </select>
+              )}
             </div>
 
             {(inputMode === 'manual' || isImageModeWithModel) && (
@@ -220,20 +240,32 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
                 <div>
                   <label htmlFor="mileage" className="block text-dark-300 mb-2 text-sm flex items-center">
                     <Gauge className="w-4 h-4 mr-1" />
-                    Mileage (km)
+                    Mileage (km) <span className="text-racing-red-500 ml-1">*</span>
                   </label>
                   <input 
                     type="number"
                     id="mileage"
                     name="mileage"
-                    value={formData.mileage}
-                    onChange={onInputChange}
-                    className="input-field"
+                    value={formData.mileage || ''}
+                    onChange={(e) => {
+                      onInputChange(e);
+                      if (validationErrors.mileage && e.target.value) {
+                        setValidationErrors(prev => ({ ...prev, mileage: '' }));
+                      }
+                    }}
+                    className={`input-field ${validationErrors.mileage ? 'border-racing-red-500' : ''}`}
                     min="0"
                     step="1000"
                     disabled={loading}
-                    placeholder="Enter value"
+                    placeholder="Enter mileage"
+                    required
                   />
+                  {validationErrors.mileage && (
+                    <div className="text-racing-red-500 text-sm mt-1 flex items-center">
+                      <AlertCircle className="w-3 h-3 mr-1" />
+                      {validationErrors.mileage}
+                    </div>
+                  )}
                 </div>
 
                 <div>
