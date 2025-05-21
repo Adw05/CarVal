@@ -29,7 +29,7 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
   const [models, setModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [inputMode, setInputMode] = useState<'manual' | 'image'>('manual');
+  const [inputMode, setInputMode] = useState<'manual' | 'image' | null>(null);
 
   useEffect(() => {
     const loadModels = async () => {
@@ -76,12 +76,55 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
     }
   };
 
-  const handleModeChange = (mode: 'manual' | 'image') => {
+  const handleModeSelect = (mode: 'manual' | 'image') => {
     setInputMode(mode);
     if (mode === 'manual') {
       setUploadedImage(null);
     }
   };
+
+  if (!inputMode) {
+    return (
+      <motion.div 
+        className="glass-card p-6 md:p-8 max-w-4xl mx-auto"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h2 className="text-xl md:text-2xl font-racing mb-6 text-center">
+          SELECT INPUT <span className="text-racing-red-500">METHOD</span>
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <motion.button
+            onClick={() => handleModeSelect('manual')}
+            className="p-8 rounded-lg bg-dark-800 hover:bg-dark-700 transition-all duration-300 flex flex-col items-center space-y-4"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <PenSquare className="w-12 h-12 text-racing-red-500" />
+            <div>
+              <h3 className="text-lg font-racing mb-2">MANUAL ENTRY</h3>
+              <p className="text-sm text-dark-300">Enter vehicle details manually</p>
+            </div>
+          </motion.button>
+
+          <motion.button
+            onClick={() => handleModeSelect('image')}
+            className="p-8 rounded-lg bg-dark-800 hover:bg-dark-700 transition-all duration-300 flex flex-col items-center space-y-4"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Image className="w-12 h-12 text-racing-red-500" />
+            <div>
+              <h3 className="text-lg font-racing mb-2">IMAGE RECOGNITION</h3>
+              <p className="text-sm text-dark-300">Upload a photo of your vehicle</p>
+            </div>
+          </motion.button>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div 
@@ -90,43 +133,24 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <h2 className="text-xl md:text-2xl font-racing mb-6 flex items-center">
-        <CarIcon className="mr-2 text-racing-red-500" />
-        <span>PREDICT <span className="text-racing-red-500">TOYOTA</span> VALUE</span>
-      </h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl md:text-2xl font-racing flex items-center">
+          <CarIcon className="mr-2 text-racing-red-500" />
+          <span>PREDICT <span className="text-racing-red-500">TOYOTA</span> VALUE</span>
+        </h2>
+        <button
+          onClick={() => setInputMode(null)}
+          className="text-sm text-dark-400 hover:text-white transition-colors"
+        >
+          Change Method
+        </button>
+      </div>
 
       {error && (
         <div className="bg-racing-red-900/50 border border-racing-red-700 text-white p-4 rounded-md mb-6">
           {error}
         </div>
       )}
-
-      <div className="mb-8">
-        <div className="flex space-x-4">
-          <button
-            onClick={() => handleModeChange('manual')}
-            className={`flex-1 p-4 rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 ${
-              inputMode === 'manual' 
-                ? 'bg-racing-red-600 text-white' 
-                : 'bg-dark-800 text-dark-300 hover:bg-dark-700'
-            }`}
-          >
-            <PenSquare className="w-5 h-5" />
-            <span>Manual Entry</span>
-          </button>
-          <button
-            onClick={() => handleModeChange('image')}
-            className={`flex-1 p-4 rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 ${
-              inputMode === 'image' 
-                ? 'bg-racing-red-600 text-white' 
-                : 'bg-dark-800 text-dark-300 hover:bg-dark-700'
-            }`}
-          >
-            <Image className="w-5 h-5" />
-            <span>Image Recognition</span>
-          </button>
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
@@ -199,7 +223,7 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
                 min="0"
                 step="1000"
                 disabled={loading}
-                placeholder="Enter mileage"
+                placeholder="Enter value"
               />
             </div>
 
@@ -225,7 +249,7 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
             <motion.button
               type="submit"
               className="btn-primary w-full flex justify-center items-center"
-              disabled={loading || (inputMode === 'image' && !formData.model)}
+              disabled={loading || !formData.model || (inputMode === 'image' && !uploadedImage)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
