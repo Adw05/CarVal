@@ -44,6 +44,12 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
   // Get available models for the selected manufacturer
   const availableModels = formData.manufacturer ? (CAR_MODELS[formData.manufacturer] || []) : [];
 
+  // Check if we're in image mode and the model has been detected
+  const imageModelDetected = inputMode === 'image' && formData.model;
+
+  // Condition to show the full form fields
+  const showFormFields = inputMode === 'manual' || (inputMode === 'image' && formData.model);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -109,14 +115,6 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
       setUploadedImage(null);
     }
   };
-
-  // Handle external switch to manual mode (from image recognition)
-  React.useEffect(() => {
-    if (formData.manufacturer === 'Toyota' && formData.model && inputMode === 'image') {
-      // Switch to manual mode to let user complete the form
-      setInputMode('manual');
-    }
-  }, [formData.manufacturer, formData.model, inputMode]);
 
   // Handle manufacturer change - reset model when manufacturer changes
   const handleManufacturerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -195,295 +193,36 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Manufacturer Dropdown */}
-            <div>
-              <label htmlFor="manufacturer" className="block text-dark-300 mb-2 text-sm">
-                Manufacturer <span className="text-racing-red-500">*</span>
-              </label>
-              <select 
-                id="manufacturer"
-                name="manufacturer"
-                value={formData.manufacturer}
-                onChange={handleManufacturerChange}
-                className={`input-field ${validationErrors.manufacturer ? 'border-racing-red-500' : ''}`}
-                disabled={loading}
-              >
-                <option value="">Select manufacturer</option>
-                {MANUFACTURERS.map(manufacturer => (
-                  <option key={manufacturer} value={manufacturer}>{manufacturer}</option>
-                ))}
-              </select>
-              {validationErrors.manufacturer && (
-                <div className="text-racing-red-500 text-sm mt-1 flex items-center">
-                  <AlertCircle className="w-3 h-3 mr-1" />
-                  {validationErrors.manufacturer}
-                </div>
-              )}
-            </div>
-
-            {/* Model Dropdown - Cascading */}
-            <div>
-              <label htmlFor="model" className="block text-dark-300 mb-2 text-sm">
-                Model <span className="text-racing-red-500">*</span>
-              </label>
-              <select 
-                id="model"
-                name="model"
-                value={formData.model}
-                onChange={onInputChange}
-                className={`input-field ${validationErrors.model ? 'border-racing-red-500' : ''} ${!formData.manufacturer ? 'opacity-50 cursor-not-allowed' : ''}`}
-                disabled={loading || !formData.manufacturer}
-              >
-                <option value="">
-                  {!formData.manufacturer ? 'Select manufacturer first' : 'Select model'}
-                </option>
-                {availableModels.map(model => (
-                  <option key={model} value={model}>{model}</option>
-                ))}
-              </select>
-              {validationErrors.model && (
-                <div className="text-racing-red-500 text-sm mt-1 flex items-center">
-                  <AlertCircle className="w-3 h-3 mr-1" />
-                  {validationErrors.model}
-                </div>
-              )}
-            </div>
-
-            {/* Year Slider */}
-            <div>
-              <label htmlFor="year" className="block text-dark-300 mb-2 text-sm flex items-center">
-                <Calendar className="w-4 h-4 mr-1" />
-                Manufacturing Year
-              </label>
-              <input 
-                type="range"
-                id="year"
-                name="year"
-                min="1990"
-                max="2025"
-                value={formData.year}
-                onChange={onInputChange}
-                className="w-full"
-                disabled={loading}
-              />
-              <div className="flex justify-between text-sm text-dark-400 mt-1">
-                <span>1990</span>
-                <span className="text-white font-semibold">{formData.year}</span>
-                <span>2025</span>
-              </div>
-            </div>
-
-            {/* Mileage Input */}
-            <div>
-              <label htmlFor="mileage" className="block text-dark-300 mb-2 text-sm flex items-center">
-                <Gauge className="w-4 h-4 mr-1" />
-                Mileage (km) <span className="text-racing-red-500 ml-1">*</span>
-              </label>
-              <input 
-                type="number"
-                id="mileage"
-                name="mileage"
-                value={formData.mileage || ''}
-                onChange={(e) => {
-                  onInputChange(e);
-                  if (validationErrors.mileage && e.target.value) {
-                    setValidationErrors(prev => ({ ...prev, mileage: '' }));
-                  }
-                }}
-                className={`input-field ${validationErrors.mileage ? 'border-racing-red-500' : ''}`}
-                min="0"
-                step="1000"
-                disabled={loading}
-                placeholder="Enter mileage"
-                required
-              />
-              {validationErrors.mileage && (
-                <div className="text-racing-red-500 text-sm mt-1 flex items-center">
-                  <AlertCircle className="w-3 h-3 mr-1" />
-                  {validationErrors.mileage}
-                </div>
-              )}
-            </div>
-
-            {/* Fuel Type */}
-            <div>
-              <label htmlFor="fuel_type" className="block text-dark-300 mb-2 text-sm flex items-center">
-                <Fuel className="w-4 h-4 mr-1" />
-                Fuel Type <span className="text-racing-red-500 ml-1">*</span>
-              </label>
-              <select
-                id="fuel_type"
-                name="fuel_type"
-                value={formData.fuel_type}
-                onChange={onInputChange}
-                className={`input-field ${validationErrors.fuel_type ? 'border-racing-red-500' : ''}`}
-                disabled={loading}
-              >
-                <option value="">Select fuel type</option>
-                {FUEL_TYPES.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-              {validationErrors.fuel_type && (
-                <div className="text-racing-red-500 text-sm mt-1 flex items-center">
-                  <AlertCircle className="w-3 h-3 mr-1" />
-                  {validationErrors.fuel_type}
-                </div>
-              )}
-            </div>
-
-            {/* Transmission */}
-            <div>
-              <label htmlFor="transmission" className="block text-dark-300 mb-2 text-sm flex items-center">
-                <Settings className="w-4 h-4 mr-1" />
-                Transmission <span className="text-racing-red-500 ml-1">*</span>
-              </label>
-              <select
-                id="transmission"
-                name="transmission"
-                value={formData.transmission}
-                onChange={onInputChange}
-                className={`input-field ${validationErrors.transmission ? 'border-racing-red-500' : ''}`}
-                disabled={loading}
-              >
-                <option value="">Select transmission</option>
-                {TRANSMISSIONS.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-              {validationErrors.transmission && (
-                <div className="text-racing-red-500 text-sm mt-1 flex items-center">
-                  <AlertCircle className="w-3 h-3 mr-1" />
-                  {validationErrors.transmission}
-                </div>
-              )}
-            </div>
-
-            {/* Body Type */}
-            <div>
-              <label htmlFor="body_type" className="block text-dark-300 mb-2 text-sm flex items-center">
-                <CarIcon className="w-4 h-4 mr-1" />
-                Body Type <span className="text-racing-red-500 ml-1">*</span>
-              </label>
-              <select
-                id="body_type"
-                name="body_type"
-                value={formData.body_type}
-                onChange={onInputChange}
-                className={`input-field ${validationErrors.body_type ? 'border-racing-red-500' : ''}`}
-                disabled={loading}
-              >
-                <option value="">Select body type</option>
-                {BODY_TYPES.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-              {validationErrors.body_type && (
-                <div className="text-racing-red-500 text-sm mt-1 flex items-center">
-                  <AlertCircle className="w-3 h-3 mr-1" />
-                  {validationErrors.body_type}
-                </div>
-              )}
-            </div>
-
-            {/* Cylinder */}
-            <div>
-              <label htmlFor="cylinder" className="block text-dark-300 mb-2 text-sm flex items-center">
-                <CircleDot className="w-4 h-4 mr-1" />
-                Cylinders
-              </label>
-              <input 
-                type="number"
-                id="cylinder"
-                name="cylinder"
-                value={formData.cylinder}
-                onChange={onInputChange}
-                className="input-field"
-                min="2"
-                max="16"
-                disabled={loading}
-              />
-            </div>
-
-            {/* Seats */}
-            <div>
-              <label htmlFor="seats" className="block text-dark-300 mb-2 text-sm flex items-center">
-                <Armchair className="w-4 h-4 mr-1" />
-                Seats
-              </label>
-              <input 
-                type="number"
-                id="seats"
-                name="seats"
-                value={formData.seats}
-                onChange={onInputChange}
-                className="input-field"
-                min="2"
-                max="9"
-                disabled={loading}
-              />
-            </div>
-
-            {/* Future Year */}
-            <div>
-              <label htmlFor="future_year" className="block text-dark-300 mb-2 text-sm flex items-center">
-                <PlusCircle className="w-4 h-4 mr-1" />
-                Prediction Year
-              </label>
-              <select
-                id="future_year"
-                name="future_year"
-                value={formData.future_year}
-                onChange={onInputChange}
-                className="input-field"
-                disabled={loading}
-              >
-                {Array.from({ length: 6 }, (_, i) => 2025 + i).map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
-            </div>
-
-            <motion.button
-              type="submit"
-              className="btn-primary w-full flex justify-center items-center"
-              disabled={loading || !canSubmit}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              {loading ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Processing...
-                </>
-              ) : (
-                'Calculate Price'
-              )}
-            </motion.button>
-          </form>
-        </div>
-
-        {inputMode === 'image' && (
+      {/* IMAGE MODE LAYOUT */}
+      {inputMode === 'image' && (
+        <div className="space-y-6">
+          {/* Step 1: Disabled Manufacturer Field (Always Visible in Image Mode) */}
           <div>
-            <div className="mb-4">
-              <h3 className="text-lg font-racing mb-2 flex items-center">
-                <Upload className="w-4 h-4 mr-1 text-racing-red-500" />
-                VEHICLE RECOGNITION
-              </h3>
-              <p className="text-sm text-dark-300 mb-2">
-                Upload an image of a Toyota vehicle to automatically identify the model
-              </p>
-              <p className="text-xs text-dark-400 mb-4">
-                Note: Image recognition currently only supports Toyota vehicles.
-                After detection, fill in the remaining details to get the price prediction.
-              </p>
-            </div>
+            <label htmlFor="manufacturer-image" className="block text-dark-300 mb-2 text-sm">
+              Manufacturer
+            </label>
+            <input
+              type="text"
+              id="manufacturer-image"
+              value="Toyota (Only available option currently)"
+              className="input-field opacity-50 cursor-not-allowed"
+              disabled
+            />
+          </div>
+
+          {/* Vehicle Recognition Upload Box */}
+          <div>
+            <h3 className="text-lg font-racing mb-2 flex items-center">
+              <Upload className="w-4 h-4 mr-1 text-racing-red-500" />
+              VEHICLE RECOGNITION
+            </h3>
+            <p className="text-sm text-dark-300 mb-2">
+              Upload an image of a Toyota vehicle to automatically identify the model
+            </p>
+            <p className="text-xs text-dark-400 mb-4">
+              Note: Image recognition currently only supports Toyota vehicles.
+              After detection, fill in the remaining details to get the price prediction.
+            </p>
 
             <Dropzone onDrop={handleImageDrop} accept={{ 'image/*': [] }} disabled={loading}>
               {({ getRootProps, getInputProps, isDragActive }) => (
@@ -527,9 +266,526 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
               )}
             </Dropzone>
           </div>
-        )}
 
-        {inputMode === 'manual' && (
+          {/* Step 2: Show detected model and remaining fields ONLY after model is detected */}
+          {imageModelDetected && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              {/* Detected Model Field (Disabled) */}
+              <div className="mb-5">
+                <label htmlFor="model-detected" className="block text-dark-300 mb-2 text-sm">
+                  Detected Model
+                </label>
+                <input
+                  type="text"
+                  id="model-detected"
+                  value={formData.model}
+                  className="input-field opacity-50 cursor-not-allowed"
+                  disabled
+                />
+              </div>
+
+              {/* Remaining Form Fields */}
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Year Slider */}
+                <div>
+                  <label htmlFor="year" className="block text-dark-300 mb-2 text-sm flex items-center">
+                    <Calendar className="w-4 h-4 mr-1" />
+                    Manufacturing Year
+                  </label>
+                  <input 
+                    type="range"
+                    id="year"
+                    name="year"
+                    min="1990"
+                    max="2025"
+                    value={formData.year}
+                    onChange={onInputChange}
+                    className="w-full"
+                    disabled={loading}
+                  />
+                  <div className="flex justify-between text-sm text-dark-400 mt-1">
+                    <span>1990</span>
+                    <span className="text-white font-semibold">{formData.year}</span>
+                    <span>2025</span>
+                  </div>
+                </div>
+
+                {/* Mileage Input */}
+                <div>
+                  <label htmlFor="mileage" className="block text-dark-300 mb-2 text-sm flex items-center">
+                    <Gauge className="w-4 h-4 mr-1" />
+                    Mileage (km) <span className="text-racing-red-500 ml-1">*</span>
+                  </label>
+                  <input 
+                    type="number"
+                    id="mileage"
+                    name="mileage"
+                    value={formData.mileage || ''}
+                    onChange={(e) => {
+                      onInputChange(e);
+                      if (validationErrors.mileage && e.target.value) {
+                        setValidationErrors(prev => ({ ...prev, mileage: '' }));
+                      }
+                    }}
+                    className={`input-field ${validationErrors.mileage ? 'border-racing-red-500' : ''}`}
+                    min="0"
+                    step="1000"
+                    disabled={loading}
+                    placeholder="Enter mileage"
+                    required
+                  />
+                  {validationErrors.mileage && (
+                    <div className="text-racing-red-500 text-sm mt-1 flex items-center">
+                      <AlertCircle className="w-3 h-3 mr-1" />
+                      {validationErrors.mileage}
+                    </div>
+                  )}
+                </div>
+
+                {/* Fuel Type */}
+                <div>
+                  <label htmlFor="fuel_type" className="block text-dark-300 mb-2 text-sm flex items-center">
+                    <Fuel className="w-4 h-4 mr-1" />
+                    Fuel Type <span className="text-racing-red-500 ml-1">*</span>
+                  </label>
+                  <select
+                    id="fuel_type"
+                    name="fuel_type"
+                    value={formData.fuel_type}
+                    onChange={onInputChange}
+                    className={`input-field ${validationErrors.fuel_type ? 'border-racing-red-500' : ''}`}
+                    disabled={loading}
+                  >
+                    <option value="">Select fuel type</option>
+                    {FUEL_TYPES.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                  {validationErrors.fuel_type && (
+                    <div className="text-racing-red-500 text-sm mt-1 flex items-center">
+                      <AlertCircle className="w-3 h-3 mr-1" />
+                      {validationErrors.fuel_type}
+                    </div>
+                  )}
+                </div>
+
+                {/* Transmission */}
+                <div>
+                  <label htmlFor="transmission" className="block text-dark-300 mb-2 text-sm flex items-center">
+                    <Settings className="w-4 h-4 mr-1" />
+                    Transmission <span className="text-racing-red-500 ml-1">*</span>
+                  </label>
+                  <select
+                    id="transmission"
+                    name="transmission"
+                    value={formData.transmission}
+                    onChange={onInputChange}
+                    className={`input-field ${validationErrors.transmission ? 'border-racing-red-500' : ''}`}
+                    disabled={loading}
+                  >
+                    <option value="">Select transmission</option>
+                    {TRANSMISSIONS.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                  {validationErrors.transmission && (
+                    <div className="text-racing-red-500 text-sm mt-1 flex items-center">
+                      <AlertCircle className="w-3 h-3 mr-1" />
+                      {validationErrors.transmission}
+                    </div>
+                  )}
+                </div>
+
+                {/* Body Type */}
+                <div>
+                  <label htmlFor="body_type" className="block text-dark-300 mb-2 text-sm flex items-center">
+                    <CarIcon className="w-4 h-4 mr-1" />
+                    Body Type <span className="text-racing-red-500 ml-1">*</span>
+                  </label>
+                  <select
+                    id="body_type"
+                    name="body_type"
+                    value={formData.body_type}
+                    onChange={onInputChange}
+                    className={`input-field ${validationErrors.body_type ? 'border-racing-red-500' : ''}`}
+                    disabled={loading}
+                  >
+                    <option value="">Select body type</option>
+                    {BODY_TYPES.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                  {validationErrors.body_type && (
+                    <div className="text-racing-red-500 text-sm mt-1 flex items-center">
+                      <AlertCircle className="w-3 h-3 mr-1" />
+                      {validationErrors.body_type}
+                    </div>
+                  )}
+                </div>
+
+                {/* Cylinder */}
+                <div>
+                  <label htmlFor="cylinder" className="block text-dark-300 mb-2 text-sm flex items-center">
+                    <CircleDot className="w-4 h-4 mr-1" />
+                    Cylinders
+                  </label>
+                  <input 
+                    type="number"
+                    id="cylinder"
+                    name="cylinder"
+                    value={formData.cylinder}
+                    onChange={onInputChange}
+                    className="input-field"
+                    min="2"
+                    max="16"
+                    disabled={loading}
+                  />
+                </div>
+
+                {/* Seats */}
+                <div>
+                  <label htmlFor="seats" className="block text-dark-300 mb-2 text-sm flex items-center">
+                    <Armchair className="w-4 h-4 mr-1" />
+                    Seats
+                  </label>
+                  <input 
+                    type="number"
+                    id="seats"
+                    name="seats"
+                    value={formData.seats}
+                    onChange={onInputChange}
+                    className="input-field"
+                    min="2"
+                    max="9"
+                    disabled={loading}
+                  />
+                </div>
+
+                {/* Future Year */}
+                <div>
+                  <label htmlFor="future_year" className="block text-dark-300 mb-2 text-sm flex items-center">
+                    <PlusCircle className="w-4 h-4 mr-1" />
+                    Prediction Year
+                  </label>
+                  <select
+                    id="future_year"
+                    name="future_year"
+                    value={formData.future_year}
+                    onChange={onInputChange}
+                    className="input-field"
+                    disabled={loading}
+                  >
+                    {Array.from({ length: 6 }, (_, i) => 2025 + i).map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <motion.button
+                  type="submit"
+                  className="btn-primary w-full flex justify-center items-center"
+                  disabled={loading || !canSubmit}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing...
+                    </>
+                  ) : (
+                    'Calculate Price'
+                  )}
+                </motion.button>
+              </form>
+            </motion.div>
+          )}
+        </div>
+      )}
+
+      {/* MANUAL MODE LAYOUT */}
+      {inputMode === 'manual' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Manufacturer Dropdown */}
+              <div>
+                <label htmlFor="manufacturer" className="block text-dark-300 mb-2 text-sm">
+                  Manufacturer <span className="text-racing-red-500">*</span>
+                </label>
+                <select 
+                  id="manufacturer"
+                  name="manufacturer"
+                  value={formData.manufacturer}
+                  onChange={handleManufacturerChange}
+                  className={`input-field ${validationErrors.manufacturer ? 'border-racing-red-500' : ''}`}
+                  disabled={loading}
+                >
+                  <option value="">Select manufacturer</option>
+                  {MANUFACTURERS.map(manufacturer => (
+                    <option key={manufacturer} value={manufacturer}>{manufacturer}</option>
+                  ))}
+                </select>
+                {validationErrors.manufacturer && (
+                  <div className="text-racing-red-500 text-sm mt-1 flex items-center">
+                    <AlertCircle className="w-3 h-3 mr-1" />
+                    {validationErrors.manufacturer}
+                  </div>
+                )}
+              </div>
+
+              {/* Model Dropdown - Cascading */}
+              <div>
+                <label htmlFor="model" className="block text-dark-300 mb-2 text-sm">
+                  Model <span className="text-racing-red-500">*</span>
+                </label>
+                <select 
+                  id="model"
+                  name="model"
+                  value={formData.model}
+                  onChange={onInputChange}
+                  className={`input-field ${validationErrors.model ? 'border-racing-red-500' : ''} ${!formData.manufacturer ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={loading || !formData.manufacturer}
+                >
+                  <option value="">
+                    {!formData.manufacturer ? 'Select manufacturer first' : 'Select model'}
+                  </option>
+                  {availableModels.map(model => (
+                    <option key={model} value={model}>{model}</option>
+                  ))}
+                </select>
+                {validationErrors.model && (
+                  <div className="text-racing-red-500 text-sm mt-1 flex items-center">
+                    <AlertCircle className="w-3 h-3 mr-1" />
+                    {validationErrors.model}
+                  </div>
+                )}
+              </div>
+
+              {/* Year Slider */}
+              <div>
+                <label htmlFor="year" className="block text-dark-300 mb-2 text-sm flex items-center">
+                  <Calendar className="w-4 h-4 mr-1" />
+                  Manufacturing Year
+                </label>
+                <input 
+                  type="range"
+                  id="year"
+                  name="year"
+                  min="1990"
+                  max="2025"
+                  value={formData.year}
+                  onChange={onInputChange}
+                  className="w-full"
+                  disabled={loading}
+                />
+                <div className="flex justify-between text-sm text-dark-400 mt-1">
+                  <span>1990</span>
+                  <span className="text-white font-semibold">{formData.year}</span>
+                  <span>2025</span>
+                </div>
+              </div>
+
+              {/* Mileage Input */}
+              <div>
+                <label htmlFor="mileage" className="block text-dark-300 mb-2 text-sm flex items-center">
+                  <Gauge className="w-4 h-4 mr-1" />
+                  Mileage (km) <span className="text-racing-red-500 ml-1">*</span>
+                </label>
+                <input 
+                  type="number"
+                  id="mileage"
+                  name="mileage"
+                  value={formData.mileage || ''}
+                  onChange={(e) => {
+                    onInputChange(e);
+                    if (validationErrors.mileage && e.target.value) {
+                      setValidationErrors(prev => ({ ...prev, mileage: '' }));
+                    }
+                  }}
+                  className={`input-field ${validationErrors.mileage ? 'border-racing-red-500' : ''}`}
+                  min="0"
+                  step="1000"
+                  disabled={loading}
+                  placeholder="Enter mileage"
+                  required
+                />
+                {validationErrors.mileage && (
+                  <div className="text-racing-red-500 text-sm mt-1 flex items-center">
+                    <AlertCircle className="w-3 h-3 mr-1" />
+                    {validationErrors.mileage}
+                  </div>
+                )}
+              </div>
+
+              {/* Fuel Type */}
+              <div>
+                <label htmlFor="fuel_type" className="block text-dark-300 mb-2 text-sm flex items-center">
+                  <Fuel className="w-4 h-4 mr-1" />
+                  Fuel Type <span className="text-racing-red-500 ml-1">*</span>
+                </label>
+                <select
+                  id="fuel_type"
+                  name="fuel_type"
+                  value={formData.fuel_type}
+                  onChange={onInputChange}
+                  className={`input-field ${validationErrors.fuel_type ? 'border-racing-red-500' : ''}`}
+                  disabled={loading}
+                >
+                  <option value="">Select fuel type</option>
+                  {FUEL_TYPES.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+                {validationErrors.fuel_type && (
+                  <div className="text-racing-red-500 text-sm mt-1 flex items-center">
+                    <AlertCircle className="w-3 h-3 mr-1" />
+                    {validationErrors.fuel_type}
+                  </div>
+                )}
+              </div>
+
+              {/* Transmission */}
+              <div>
+                <label htmlFor="transmission" className="block text-dark-300 mb-2 text-sm flex items-center">
+                  <Settings className="w-4 h-4 mr-1" />
+                  Transmission <span className="text-racing-red-500 ml-1">*</span>
+                </label>
+                <select
+                  id="transmission"
+                  name="transmission"
+                  value={formData.transmission}
+                  onChange={onInputChange}
+                  className={`input-field ${validationErrors.transmission ? 'border-racing-red-500' : ''}`}
+                  disabled={loading}
+                >
+                  <option value="">Select transmission</option>
+                  {TRANSMISSIONS.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+                {validationErrors.transmission && (
+                  <div className="text-racing-red-500 text-sm mt-1 flex items-center">
+                    <AlertCircle className="w-3 h-3 mr-1" />
+                    {validationErrors.transmission}
+                  </div>
+                )}
+              </div>
+
+              {/* Body Type */}
+              <div>
+                <label htmlFor="body_type" className="block text-dark-300 mb-2 text-sm flex items-center">
+                  <CarIcon className="w-4 h-4 mr-1" />
+                  Body Type <span className="text-racing-red-500 ml-1">*</span>
+                </label>
+                <select
+                  id="body_type"
+                  name="body_type"
+                  value={formData.body_type}
+                  onChange={onInputChange}
+                  className={`input-field ${validationErrors.body_type ? 'border-racing-red-500' : ''}`}
+                  disabled={loading}
+                >
+                  <option value="">Select body type</option>
+                  {BODY_TYPES.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+                {validationErrors.body_type && (
+                  <div className="text-racing-red-500 text-sm mt-1 flex items-center">
+                    <AlertCircle className="w-3 h-3 mr-1" />
+                    {validationErrors.body_type}
+                  </div>
+                )}
+              </div>
+
+              {/* Cylinder */}
+              <div>
+                <label htmlFor="cylinder" className="block text-dark-300 mb-2 text-sm flex items-center">
+                  <CircleDot className="w-4 h-4 mr-1" />
+                  Cylinders
+                </label>
+                <input 
+                  type="number"
+                  id="cylinder"
+                  name="cylinder"
+                  value={formData.cylinder}
+                  onChange={onInputChange}
+                  className="input-field"
+                  min="2"
+                  max="16"
+                  disabled={loading}
+                />
+              </div>
+
+              {/* Seats */}
+              <div>
+                <label htmlFor="seats" className="block text-dark-300 mb-2 text-sm flex items-center">
+                  <Armchair className="w-4 h-4 mr-1" />
+                  Seats
+                </label>
+                <input 
+                  type="number"
+                  id="seats"
+                  name="seats"
+                  value={formData.seats}
+                  onChange={onInputChange}
+                  className="input-field"
+                  min="2"
+                  max="9"
+                  disabled={loading}
+                />
+              </div>
+
+              {/* Future Year */}
+              <div>
+                <label htmlFor="future_year" className="block text-dark-300 mb-2 text-sm flex items-center">
+                  <PlusCircle className="w-4 h-4 mr-1" />
+                  Prediction Year
+                </label>
+                <select
+                  id="future_year"
+                  name="future_year"
+                  value={formData.future_year}
+                  onChange={onInputChange}
+                  className="input-field"
+                  disabled={loading}
+                >
+                  {Array.from({ length: 6 }, (_, i) => 2025 + i).map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+
+              <motion.button
+                type="submit"
+                className="btn-primary w-full flex justify-center items-center"
+                disabled={loading || !canSubmit}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {loading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing...
+                  </>
+                ) : (
+                  'Calculate Price'
+                )}
+              </motion.button>
+            </form>
+          </div>
+
           <div className="flex items-center justify-center">
             <div className="text-center text-dark-400">
               <CarIcon className="w-24 h-24 mx-auto mb-4 text-dark-600" />
@@ -537,8 +793,8 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
               <p className="text-xs mt-2 text-dark-500">All required fields are marked with *</p>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </motion.div>
   );
 };
