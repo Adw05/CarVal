@@ -50,6 +50,14 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
     Record<string, string>
   >({});
 
+  // NOTE: All hooks must be called unconditionally before any early return
+  // to satisfy React's Rules of Hooks. Switching from null → 'manual' must
+  // not change the number/order of hook calls.
+  const availableModels = useMemo(() => {
+    if (!formData.manufacturer) return [];
+    return MODELS_BY_MANUFACTURER[formData.manufacturer] ?? [];
+  }, [formData.manufacturer]);
+
   // ── Mode picker ────────────────────────────────────────────────────────
   if (!inputMode) {
     return (
@@ -101,11 +109,6 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────
-  const availableModels = useMemo(() => {
-    if (!formData.manufacturer) return [];
-    return MODELS_BY_MANUFACTURER[formData.manufacturer] ?? [];
-  }, [formData.manufacturer]);
-
   const hasModelDictionary = availableModels.length > 0;
   const isImageMode = inputMode === 'image';
   const showFullForm = inputMode === 'manual' || (isImageMode && !!formData.model);
