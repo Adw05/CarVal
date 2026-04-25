@@ -26,6 +26,7 @@ interface PredictionFormProps {
   uploadedImage: string | null;
   setUploadedImage: React.Dispatch<React.SetStateAction<string | null>>;
   switchToManualMode: () => void;
+  onResetState: () => void;
 }
 
 const PredictionForm: React.FC<PredictionFormProps> = ({
@@ -37,6 +38,7 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
   uploadedImage,
   setUploadedImage,
   switchToManualMode,
+  onResetState,
 }) => {
   const [inputMode, setInputMode] = useState<'manual' | 'image' | null>(null);
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
@@ -95,7 +97,7 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
       reader.readAsDataURL(file);
       
       const imageFormData = new FormData();
-      imageFormData.append('file', file);
+      imageFormData.append('image', file);
       
       // Reset mileage field to empty when image is uploaded
       onInputChange({
@@ -110,6 +112,7 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
   };
 
   const handleModeSelect = (mode: 'manual' | 'image') => {
+    onResetState();
     setInputMode(mode);
     if (mode === 'manual') {
       setUploadedImage(null);
@@ -186,7 +189,10 @@ const PredictionForm: React.FC<PredictionFormProps> = ({
           <span>PREDICT <span className="text-racing-red-500">CAR</span> VALUE</span>
         </h2>
         <button
-          onClick={() => setInputMode(null)}
+          onClick={() => {
+            onResetState();
+            setInputMode(null);
+          }}
           className="text-sm text-dark-400 hover:text-white transition-colors"
         >
           Change Method

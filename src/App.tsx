@@ -116,6 +116,24 @@ function App() {
     // The form component handles the mode switch internally
   };
 
+  const handleResetState = () => {
+    setPredictionResult(null);
+    setError(null);
+    setUploadedImage(null);
+    setFormData({
+      manufacturer: '',
+      model: '',
+      year: 2020,
+      mileage: 0,
+      fuel_type: '',
+      transmission: '',
+      body_type: '',
+      cylinder: 4,
+      seats: 5,
+      future_year: 2025,
+    });
+  };
+
   const scrollToResults = () => {
     setTimeout(() => {
       document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' });
@@ -171,11 +189,14 @@ function App() {
             uploadedImage={uploadedImage}
             setUploadedImage={setUploadedImage}
             switchToManualMode={switchToManualMode}
+            onResetState={handleResetState}
           />
           
-          <div id="results">
-            <PredictionResult result={predictionResult} />
-          </div>
+          {predictionResult && (
+            <div id="results">
+              <PredictionResult result={predictionResult} />
+            </div>
+          )}
         </motion.div>
       </main>
       
