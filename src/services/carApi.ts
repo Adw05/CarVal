@@ -1,67 +1,8 @@
-//const API_URL = 'http://127.0.0.1:8080';
-const API_URL = 'https://calval-backend.onrender.com';
+import { PredictionPayload, ApiPredictionResponse, ImageRecognitionResponse } from '../types';
 
-export interface PredictionRequest {
-  model: string;
-  year: number;
-  mileage: number;
-  future_year: number;
-}
+const API_URL = 'https://adw01-carval-api.hf.space';
 
-export interface PredictionResponse {
-  model: string;
-  year: number;
-  future_year: number;
-  lower_bound: number;
-  upper_bound: number;
-}
-
-export const fetchCarModels = async (): Promise<string[]> => {
-  try {
-    const response = await fetch(`${API_URL}/models`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-      },
-    });
-
-    // Log raw response for debugging
-    const text = await response.text();
-    console.log('fetchCarModels response:', text, 'Status:', response.status);
-
-    if (response.status === 304) {
-      // Retry with fresh request if 304 is received
-      console.log('304 Not Modified, retrying...');
-      const freshResponse = await fetch(`${API_URL}/models`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-        },
-      });
-      const freshText = await freshResponse.text();
-      console.log('Fresh response:', freshText, 'Status:', freshResponse.status);
-      if (!freshResponse.ok) {
-        throw new Error(`API error: ${freshResponse.status}, Response: ${freshText}`);
-      }
-      return JSON.parse(freshText);
-    }
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}, Response: ${text}`);
-    }
-
-    return JSON.parse(text);
-  } catch (error) {
-    console.error('Error fetching car models:', error);
-    throw error;
-  }
-};
-
-export const predictCarPrice = async (data: PredictionRequest): Promise<PredictionResponse> => {
+export const predictCarPrice = async (data: PredictionPayload): Promise<ApiPredictionResponse> => {
   try {
     const response = await fetch(`${API_URL}/predict`, {
       method: 'POST',
@@ -73,7 +14,6 @@ export const predictCarPrice = async (data: PredictionRequest): Promise<Predicti
       body: JSON.stringify(data),
     });
 
-    // Log raw response for debugging
     const text = await response.text();
     console.log('predictCarPrice response:', text, 'Status:', response.status);
 
@@ -84,7 +24,7 @@ export const predictCarPrice = async (data: PredictionRequest): Promise<Predicti
       } catch {
         throw new Error(`API error: ${response.status}, Response: ${text}`);
       }
-      throw new Error(errorData.error || `API error: ${response.status}`);
+      throw new Error(errorData.error || errorData.detail || `API error: ${response.status}`);
     }
 
     return JSON.parse(text);
@@ -96,7 +36,7 @@ export const predictCarPrice = async (data: PredictionRequest): Promise<Predicti
 
 export const predictFromImage = async (
   formData: FormData
-): Promise<PredictionResponse> => {
+): Promise<ImageRecognitionResponse> => {
   try {
     const response = await fetch(`${API_URL}/predict_image`, {
       method: 'POST',
@@ -113,7 +53,7 @@ export const predictFromImage = async (
       } catch {
         throw new Error(`API error: ${response.status}, Response: ${text}`);
       }
-      throw new Error(errorData.error || `API error: ${response.status}`);
+      throw new Error(errorData.error || errorData.detail || `API error: ${response.status}`);
     }
 
     return JSON.parse(text);
@@ -121,4 +61,24 @@ export const predictFromImage = async (
     console.error('Error predicting from image:', error);
     throw error;
   }
+};
+
+// Helper function to calculate depreciation on the client side
+export const calculateDepreciation = (
+  basePrice: number,
+  lowPrice: number,
+  highPrice: number,
+  futureYear: number
+): { predicted_price: number; lower_bound: number; upper_bound: number } => {
+  const currentYear = new Date().getFullYear();
+  const yearsAhead = Math.max(0, futureYear - currentYear);
+  
+  // 7% annual depreciation rate
+  const depreciationFactor = Math.pow(0.93, yearsAhead);
+  
+  return {
+    predicted_price: Math.round(basePrice * depreciationFactor),
+    lower_bound: Math.round(lowPrice * depreciationFactor),
+    upper_bound: Math.round(highPrice * depreciationFactor),
+  };
 };

@@ -4,17 +4,23 @@ import Header from './components/Header';
 import PredictionForm from './components/PredictionForm';
 import PredictionResult from './components/PredictionResult';
 import Footer from './components/Footer';
-import { CarDetails, PredictionResultType } from './types';
-import { predictCarPrice, predictFromImage } from './services/carApi';
+import { CarDetails, PredictionResultType, PredictionPayload } from './types';
+import { predictCarPrice, predictFromImage, calculateDepreciation } from './services/carApi';
 
 function App() {
   const [predictionResult, setPredictionResult] = useState<PredictionResultType | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<CarDetails>({
+    manufacturer: '',
     model: '',
     year: 2020,
     mileage: 0,
+    fuel_type: '',
+    transmission: '',
+    body_type: '',
+    cylinder: 4,
+    seats: 5,
     future_year: 2025,
   });
 
@@ -22,7 +28,9 @@ function App() {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'model' ? value : Number(value),
+      [name]: ['model', 'manufacturer', 'fuel_type', 'transmission', 'body_type'].includes(name) 
+        ? value 
+        : Number(value),
     }));
   };
 
@@ -30,10 +38,44 @@ function App() {
     try {
       setLoading(true);
       setError(null);
-      const result = await predictCarPrice(data);
+      
+      // Prepare payload - strip out future_year as it's for client-side only
+      const payload: PredictionPayload = {
+        manufacturer: data.manufacturer,
+        model: data.model,
+        year: data.year,
+        mileage: data.mileage,
+        fuel_type: data.fuel_type,
+        transmission: data.transmission,
+        body_type: data.body_type,
+        cylinder: data.cylinder,
+        seats: data.seats,
+      };
+      
+      const apiResponse = await predictCarPrice(payload);
+      
+      // Calculate depreciation on client side
+      const { predicted_price, lower_bound, upper_bound } = calculateDepreciation(
+        apiResponse.predicted_price_aed,
+        apiResponse.price_range_low,
+        apiResponse.price_range_high,
+        data.future_year
+      );
+      
+      // Build result with depreciation applied
+      const result: PredictionResultType = {
+        manufacturer: data.manufacturer,
+        model: data.model,
+        year: data.year,
+        future_year: data.future_year,
+        lower_bound,
+        upper_bound,
+        predicted_price,
+      };
+      
       setPredictionResult(result);
       scrollToResults();
-      setUploadedImage(null); // Clear uploaded image display
+      setUploadedImage(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred while predicting price');
       console.error('Prediction error:', err);
@@ -46,30 +88,32 @@ function App() {
     try {
       setLoading(true);
       setError(null);
-      // Keep current form data for year and future_year, but reset mileage
-      const currentFormData = { ...formData };
-      // Append current form data to imageFormData
-      imageFormData.set('year', String(currentFormData.year));
-      imageFormData.set('future_year', String(currentFormData.future_year));
 
       const result = await predictFromImage(imageFormData);
-      // Update form data with the predicted model and reset mileage to empty
+      
+      // Update form data with the predicted manufacturer and model
+      // Image recognition returns { manufacturer: "Toyota", model: "Predicted Model" }
       setFormData(prev => ({ 
         ...prev, 
+        manufacturer: result.manufacturer,
         model: result.model,
-        mileage: 0 // Reset mileage to empty
+        mileage: 0, // Reset mileage for user to fill in
       }));
       
-      // Don't show prediction result until user completes the form and clicks Calculate
-      // setPredictionResult(result);
-      // scrollToResults();
+      // Don't show prediction result - user needs to complete the form first
+      // The form will automatically switch to manual mode for remaining fields
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred while processing the image');
       console.error('Image processing error:', err);
-      setUploadedImage(null); // Clear uploaded image display on error
+      setUploadedImage(null);
     } finally {
       setLoading(false);
     }
+  };
+
+  const switchToManualMode = () => {
+    // This function is passed to PredictionForm to switch modes
+    // The form component handles the mode switch internally
   };
 
   const scrollToResults = () => {
@@ -82,7 +126,6 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* To use GIF background, change class to "car-background gif-bg" */}
       <div className="car-background static-bg"></div>
       
       <Header />
@@ -101,11 +144,11 @@ function App() {
             transition={{ delay: 0.2, duration: 0.7 }}
           >
             <h1 className="text-3xl md:text-5xl font-racing mb-4">
-              PREDICT YOUR CAR'S <span className="text-racing-red-500">FUTURE VALUE</span>
+              PREDICT YOUR CAR&apos;S <span className="text-racing-red-500">FUTURE VALUE</span>
             </h1>
             <p className="text-lg text-dark-300 max-w-3xl mx-auto">
-              Use our advanced AI-powered tool to accurately estimate your car's market value 
-              based on model, year, mileage, and future projections.
+              Use our advanced AI-powered tool to accurately estimate your car&apos;s market value 
+              based on manufacturer, model, year, mileage, and more. Now supporting 60+ brands!
             </p>
           </motion.div>
           
@@ -127,6 +170,7 @@ function App() {
             loading={loading}
             uploadedImage={uploadedImage}
             setUploadedImage={setUploadedImage}
+            switchToManualMode={switchToManualMode}
           />
           
           <div id="results">
