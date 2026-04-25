@@ -8,10 +8,10 @@ import { CarDetails, PredictionResultType, PredictionPayload } from './types';
 import { predictCarPrice, predictFromImage, calculateDepreciation } from './services/carApi';
 
 function App() {
-  console.log("[v0] App component rendering");
   const [predictionResult, setPredictionResult] = useState<PredictionResultType | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [formData, setFormData] = useState<CarDetails>({
     manufacturer: '',
     model: '',
@@ -140,8 +140,6 @@ function App() {
       document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' });
     }, 500);
   };
-
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
 
   return (
     <div className="min-h-screen flex flex-col">
