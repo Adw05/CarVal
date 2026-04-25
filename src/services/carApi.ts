@@ -1,124 +1,70 @@
-//const API_URL = 'http://127.0.0.1:8080';
-const API_URL = 'https://calval-backend.onrender.com';
+import {
+  PredictionRequest,
+  PredictionApiResponse,
+  ImagePredictionResponse,
+} from '../types';
 
-export interface PredictionRequest {
-  model: string;
-  year: number;
-  mileage: number;
-  future_year: number;
-}
+const API_URL = 'https://adw01-carval-api.hf.space';
 
-export interface PredictionResponse {
-  model: string;
-  year: number;
-  future_year: number;
-  lower_bound: number;
-  upper_bound: number;
-}
+/**
+ * POST /predict
+ * Sends manufacturer, model, year, mileage, fuel_type, transmission, body_type,
+ * cylinder, seats. NOTE: future_year is intentionally NOT sent.
+ */
+export const predictCarPrice = async (
+  data: PredictionRequest
+): Promise<PredictionApiResponse> => {
+  const response = await fetch(`${API_URL}/predict`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
 
-export const fetchCarModels = async (): Promise<string[]> => {
-  try {
-    const response = await fetch(`${API_URL}/models`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-      },
-    });
+  const text = await response.text();
 
-    // Log raw response for debugging
-    const text = await response.text();
-    console.log('fetchCarModels response:', text, 'Status:', response.status);
-
-    if (response.status === 304) {
-      // Retry with fresh request if 304 is received
-      console.log('304 Not Modified, retrying...');
-      const freshResponse = await fetch(`${API_URL}/models`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-        },
-      });
-      const freshText = await freshResponse.text();
-      console.log('Fresh response:', freshText, 'Status:', freshResponse.status);
-      if (!freshResponse.ok) {
-        throw new Error(`API error: ${freshResponse.status}, Response: ${freshText}`);
-      }
-      return JSON.parse(freshText);
+  if (!response.ok) {
+    let message = `API error: ${response.status}`;
+    try {
+      const parsed = JSON.parse(text);
+      message = parsed.detail || parsed.error || parsed.message || message;
+    } catch {
+      // ignore parse error, fall through with generic message
     }
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}, Response: ${text}`);
-    }
-
-    return JSON.parse(text);
-  } catch (error) {
-    console.error('Error fetching car models:', error);
-    throw error;
+    throw new Error(message);
   }
+
+  return JSON.parse(text) as PredictionApiResponse;
 };
 
-export const predictCarPrice = async (data: PredictionRequest): Promise<PredictionResponse> => {
-  try {
-    const response = await fetch(`${API_URL}/predict`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-      },
-      body: JSON.stringify(data),
-    });
-
-    // Log raw response for debugging
-    const text = await response.text();
-    console.log('predictCarPrice response:', text, 'Status:', response.status);
-
-    if (!response.ok) {
-      let errorData;
-      try {
-        errorData = JSON.parse(text);
-      } catch {
-        throw new Error(`API error: ${response.status}, Response: ${text}`);
-      }
-      throw new Error(errorData.error || `API error: ${response.status}`);
-    }
-
-    return JSON.parse(text);
-  } catch (error) {
-    console.error('Error predicting car price:', error);
-    throw error;
-  }
-};
-
+/**
+ * POST /predict_image
+ * Sends FormData with the file appended under the EXACT key "image".
+ */
 export const predictFromImage = async (
-  formData: FormData
-): Promise<PredictionResponse> => {
-  try {
-    const response = await fetch(`${API_URL}/predict_image`, {
-      method: 'POST',
-      body: formData,
-    });
+  file: File
+): Promise<ImagePredictionResponse> => {
+  const formData = new FormData();
+  formData.append('image', file);
 
-    const text = await response.text();
-    console.log('predictFromImage response:', text, 'Status:', response.status);
+  const response = await fetch(`${API_URL}/predict_image`, {
+    method: 'POST',
+    body: formData,
+  });
 
-    if (!response.ok) {
-      let errorData;
-      try {
-        errorData = JSON.parse(text);
-      } catch {
-        throw new Error(`API error: ${response.status}, Response: ${text}`);
-      }
-      throw new Error(errorData.error || `API error: ${response.status}`);
+  const text = await response.text();
+
+  if (!response.ok) {
+    let message = `API error: ${response.status}`;
+    try {
+      const parsed = JSON.parse(text);
+      message = parsed.detail || parsed.error || parsed.message || message;
+    } catch {
+      // ignore parse error
     }
-
-    return JSON.parse(text);
-  } catch (error) {
-    console.error('Error predicting from image:', error);
-    throw error;
+    throw new Error(message);
   }
+
+  return JSON.parse(text) as ImagePredictionResponse;
 };
