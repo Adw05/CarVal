@@ -8,6 +8,7 @@ import { CarDetails, PredictionResultType, PredictionPayload } from './types';
 import { predictCarPrice, predictFromImage, calculateDepreciation } from './services/carApi';
 
 function App() {
+  console.log("[v0] App component rendering");
   const [predictionResult, setPredictionResult] = useState<PredictionResultType | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
